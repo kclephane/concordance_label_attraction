@@ -360,31 +360,52 @@ HASH_coded <- HASH_coded %>% #this section creates variables around the gender &
 #### concordance calculation ####
 HASH_coded <- HASH_coded %>% # this creates a group-wise variable for concordance of label & attraction patterns, 
   mutate(concordance_label_attraction = case_when(
-    orientation_groups == "Exclusively heterosexual" & gender == "Man/male" & numeric_man_attraction == 0 & numeric_NB_attraction == 0 & numeric_woman_attraction > 0 ~ "Exclusively hetero concordant",
-    orientation_groups == "Exclusively heterosexual" & gender == "Woman/female" & numeric_woman_attraction == 0 & numeric_NB_attraction == 0 & numeric_man_attraction > 0 ~ "Exclusively hetero concordant",
+    orientation_groups == "Exclusively heterosexual" & gender == "Man/male" & numeric_man_attraction == 0 & numeric_NB_attraction == 0 & numeric_woman_attraction > 0 ~ "concordant",
+    orientation_groups == "Exclusively heterosexual" & gender == "Woman/female" & numeric_woman_attraction == 0 & numeric_NB_attraction == 0 & numeric_man_attraction > 0 ~ "concordant",
     
-    orientation_groups == "Exclusively heterosexual" & gender == "Man/male" & numeric_man_attraction > 0 & numeric_NB_attraction > 0 & numeric_woman_attraction >= 0 ~ "E het discordant",
-    orientation_groups == "Exclusively heterosexual" & gender == "Woman/female" & numeric_woman_attraction > 0 & numeric_NB_attraction > 0 & numeric_man_attraction >= 0 ~ "E het discordant",
+    orientation_groups == "Exclusively heterosexual" & gender == "Man/male" & numeric_man_attraction > 0 & numeric_NB_attraction > 0 & numeric_woman_attraction >= 0 ~ "discordant",
+    orientation_groups == "Exclusively heterosexual" & gender == "Woman/female" & numeric_woman_attraction > 0 & numeric_NB_attraction > 0 & numeric_man_attraction >= 0 ~ "discordant",
     
-    orientation_groups == "Mostly heterosexual" & gender == "Man/male" & (numeric_man_attraction > numeric_woman_attraction) | (numeric_man_attraction > 0 & numeric_NB_attraction == 0 & numeric_woman_attraction == 0) ~ "M het discordant - heavy leaning queer",
-    orientation_groups == "Mostly heterosexual" & gender == "Man/male" &  (numeric_man_attraction == 0 & numeric_NB_attraction == 0 & numeric_woman_attraction > 0) ~ "M het discordant - heavy lean exclusively het",
+    (orientation_groups == "Mostly heterosexual") & (gender == "Man/male") & ((numeric_man_attraction > numeric_woman_attraction) | (numeric_man_attraction > 0 & numeric_NB_attraction == 0 & numeric_woman_attraction == 0)) ~ "discordant",
+    (orientation_groups == "Mostly heterosexual") & (gender == "Man/male") &  ((numeric_man_attraction == 0 & numeric_NB_attraction == 0 & numeric_woman_attraction > 0)) ~ "discordant",
     
-    orientation_groups == "Mostly heterosexual" & gender == "Woman/female" & numeric_woman_attraction > numeric_man_attraction | (numeric_woman_attraction == 0 & numeric_NB_attraction == 0 & numeric_man_attraction > 0) ~ "M het discordant - heavy lean exclusively het", 
-    orientation_groups == "Mostly heterosexual" & gender == "Woman/female" & numeric_man_attraction == 0 & numeric_NB_attraction == 0 & numeric_woman_attraction > 0 ~ "M het discordant - heavy lean queer",
+    (orientation_groups == "Mostly heterosexual") & (gender == "Woman/female") & ((numeric_woman_attraction > numeric_man_attraction) | (numeric_woman_attraction == 0 & numeric_NB_attraction == 0 & numeric_man_attraction > 0)) ~ "discordant", 
+    (orientation_groups == "Mostly heterosexual") & (gender == "Woman/female") & ((numeric_man_attraction == 0 & numeric_NB_attraction == 0 & numeric_woman_attraction > 0)) ~ "discordant",
     
     
-    orientation_groups == "Bisexual" & gender == "Man/male" & numeric_woman_attraction > numeric_man_attraction | (numeric_woman_attraction == 0 & numeric_man_attraction > 0 & numeric_NB_attraction == 0) ~ "Bi discordant - leaing more queer", 
-    orientation_groups == "Bisexual" & gender == "Man/male" & (numeric_woman_attraction > 0 & numeric_man_attraction == 0 & numeric_NB_attraction == 0) ~ "Bi discordant - heavy leaning het",
+    (orientation_groups == "Bisexual") & (gender == "Man/male") & ((numeric_woman_attraction > numeric_man_attraction) | (numeric_woman_attraction == 0 & numeric_man_attraction > 0 & numeric_NB_attraction == 0)) ~ "discordant", 
+    (orientation_groups == "Bisexual") & (gender == "Man/male") & ((numeric_woman_attraction > 0 & numeric_man_attraction == 0 & numeric_NB_attraction == 0)) ~ "discordant",
     
-    orientation_groups == "Bisexual" & gender == "Woman/female" & numeric_man_attraction > numeric_woman_attraction | (numeric_woman_attraction == 0 & numeric_man_attraction > 0 & numeric_NB_attraction == 0) ~ "Bi discordant - leaning more het",
-    orientation_groups == "Bisexual" & gender == "Woman/female" & (numeric_woman_attraction > 0 & numeric_man_attraction == 0 & numeric_NB_attraction >= 0) ~ "Bi discordant - heavy leaning queer" 
+    (orientation_groups == "Bisexual") & (gender == "Woman/female") & ((numeric_man_attraction > numeric_woman_attraction) | (numeric_woman_attraction == 0 & numeric_man_attraction > 0 & numeric_NB_attraction == 0)) ~ "discordant",
+    (orientation_groups == "Bisexual") & (gender == "Woman/female") & (numeric_woman_attraction > 0 & numeric_man_attraction == 0 & numeric_NB_attraction >= 0) ~ "discordant" 
   ))
 
-HASH_concordance <- HASH_coded %>% 
-  select(., race_groups, gender, orientation_groups, concordance_label_attraction, relationship_status_groups, everything())
 
+HASH_concordance <- HASH_coded %>%
+  mutate(concord1 = concordance_label_attraction) %>%  #condord1 - working variable that lists non-cordant and missing - where missing can be either truly missing or concordant %>%
+  mutate(concordant2 = case_when(!is.na(concord1) ~ concord1, is.na(concord1) ~ "concordant")) %>%
+  mutate(concordant = case_when(concordant2 == "discordant" ~ "discordant",
+                             concordant2 == "concordant" & !is.na(numeric_man_attraction) ~ concordant2,
+                             concordant2 == "concordant" & is.na(numeric_man_attraction) ~ NA_character_))
 
+HASH_concordance <- HASH_concordance %>% 
+  select(., concordant2, concordant, concordance_label_attraction, numeric_man_attraction, numeric_woman_attraction, numeric_NB_attraction, race_groups, gender, orientation_groups, relationship_status_groups, everything())
 
+#check the NA changes
+concordance_check1 <- HASH_coded %>%
+ group_by(concordance_label_attraction) %>%
+     summarize(n = n())
+
+ concordance_check2 <- HASH_concordance %>%
+      group_by(concordance_label_attraction) %>%
+     summarize(n = n())
+
+#for ISSWSH come up with an arbitrary cutoff - we will continue this work after trying to find a better conceptualization 
+ 
+ #check distributions for most het and bi folks to determine cutoff - what's the overlap?
+#changepoint 
+
+ 
 #### predictor variable calculations ####
 HASH_coded <- HASH_coded %>% #this calculates the Lesbian Gay Bisexual Identity Scale (LGBIS) and subscales
   mutate(LGBIS_recode_11 = recode_LGBIS_reverse(LGBIS_11), 
